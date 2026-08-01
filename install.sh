@@ -14,10 +14,11 @@ SELF="$(basename "$0")"
 # Locate lib/common.sh whether run from a checkout or piped through `sh`.
 # When piped, there is no $0 directory, so fall back to fetching from main.
 _find_lib() {
+	_here="$(dirname -- "$0")"
 	# CDPATH= neutralises a user CDPATH so cd stays predictable (intentional).
 	# shellcheck disable=SC1007
-	_dir="$(CDPATH= cd -- "$(dirname -- "$0")" 2>/dev/null && pwd -P || true)"
-	if [ -n "${_dir:-}" ] && [ -f "$_dir/lib/common.sh" ]; then
+	_dir="$(CDPATH= cd -- "$_here" 2>/dev/null && pwd -P)" || _dir=""
+	if [ -n "$_dir" ] && [ -f "$_dir/lib/common.sh" ]; then
 		printf '%s\n' "$_dir/lib/common.sh"
 		return 0
 	fi
