@@ -1,0 +1,14 @@
+# Local pre-commit / terraform noise — never the tracked bundle config.
+.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+.pre-commit-cache/
+
+# Editor / OS
+.DS_Store
+*.swp
+
+# Do not ignore the curated config we ship or the example's copy.
+!hooks/.pre-commit-config.yaml
+!examples/**/.pre-commit-config.yaml

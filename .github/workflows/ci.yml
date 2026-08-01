@@ -1,0 +1,32 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: pre-commit-terraform-lite
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install test tools
+        run: |
+          set -eux
+          if command -v apt-get >/dev/null 2>&1; then
+            sudo apt-get update
+            sudo apt-get install -y --no-install-recommends bats shellcheck
+          fi
+          bats --version
+          shellcheck --version
+
+      - name: ShellCheck
+        run: shellcheck -s sh install.sh lib/common.sh
+
+      - name: Verify config has not drifted from the renderer
+        run: diff <(sh install.sh --print) hooks/.pre-commit-config.yaml
+
+      - name: Unit tests (bats)
+        run: bats test/
