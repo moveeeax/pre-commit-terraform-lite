@@ -10,13 +10,13 @@ setup() {
 @test "pctl_pin returns the pinned terraform rev" {
 	run pctl_pin terraform
 	[ "$status" -eq 0 ]
-	[ "$output" = "v1.96.1" ]
+	[ "$output" = "v1.109.4" ]
 }
 
 @test "pctl_pin returns the pinned pre-commit-hooks rev" {
 	run pctl_pin precommit-hooks
 	[ "$status" -eq 0 ]
-	[ "$output" = "v5.0.0" ]
+	[ "$output" = "v6.0.0" ]
 }
 
 @test "pctl_pin fails loudly on an unknown key" {
@@ -38,8 +38,8 @@ setup() {
 	run pctl_render_config
 	[ "$status" -eq 0 ]
 	[[ "$output" == *"antonbabenko/pre-commit-terraform"* ]]
-	[[ "$output" == *"rev: v1.96.1"* ]]
-	[[ "$output" == *"rev: v5.0.0"* ]]
+	[[ "$output" == *"rev: v1.109.4"* ]]
+	[[ "$output" == *"rev: v6.0.0"* ]]
 }
 
 @test "rendered config wires the five MVP hooks" {

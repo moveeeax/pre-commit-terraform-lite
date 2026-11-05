@@ -35,8 +35,8 @@ Pinned so the hooks actually agree with each other:
 
 | Hook | Source | Rev |
 | --- | --- | --- |
-| `trailing-whitespace`, `end-of-file-fixer`, `check-merge-conflict`, `check-yaml` | [pre-commit/pre-commit-hooks](https://github.com/pre-commit/pre-commit-hooks) | `v5.0.0` |
-| `terraform_fmt`, `terraform_validate`, `terraform_tflint`, `terraform_docs`, `terraform_trivy` | [antonbabenko/pre-commit-terraform](https://github.com/antonbabenko/pre-commit-terraform) | `v1.96.1` |
+| `trailing-whitespace`, `end-of-file-fixer`, `check-merge-conflict`, `check-yaml` | [pre-commit/pre-commit-hooks](https://github.com/pre-commit/pre-commit-hooks) | `v6.0.0` |
+| `terraform_fmt`, `terraform_validate`, `terraform_tflint`, `terraform_docs`, `terraform_trivy` | [antonbabenko/pre-commit-terraform](https://github.com/antonbabenko/pre-commit-terraform) | `v1.109.4` |
 
 The default stays fast (a `trivy` scan scoped to `HIGH,CRITICAL`, `tflint` on a
 tight rule set). Heavier scanners — `checkov`, `tfsec`, `infracost`, `terrascan`
