@@ -10,8 +10,8 @@
 # --- pinned, tested-together revisions -------------------------------------
 # One place to bump. CI verifies the checked-in config matches what these
 # render, so the two can never drift.
-PCTL_REV_PRECOMMIT_HOOKS="v5.0.0"
-PCTL_REV_TERRAFORM="v1.96.1"   # antonbabenko/pre-commit-terraform
+PCTL_REV_PRECOMMIT_HOOKS="v6.0.0"
+PCTL_REV_TERRAFORM="v1.109.4"   # antonbabenko/pre-commit-terraform
 
 # pctl_pin <key> -> prints the pinned revision, exits non-zero on unknown key.
 pctl_pin() {
