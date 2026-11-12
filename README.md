@@ -29,6 +29,13 @@ curl -fsSL .../install.sh | sh -s -- --config-only
 curl -fsSL .../install.sh | sh -s -- --print > .pre-commit-config.yaml
 ```
 
+Want a heavier scanner too? Name it with `--with` and it is rendered into the
+config instead of being pasted by hand:
+
+```sh
+curl -fsSL .../install.sh | sh -s -- --with checkov,infracost --print > .pre-commit-config.yaml
+```
+
 ## What's in the bundle
 
 Pinned so the hooks actually agree with each other:
@@ -40,14 +47,18 @@ Pinned so the hooks actually agree with each other:
 
 The default stays fast (a `trivy` scan scoped to `HIGH,CRITICAL`, `tflint` on a
 tight rule set). Heavier scanners — `checkov`, `tfsec`, `infracost`, `terrascan`
-— are **opt-in** and documented in [`docs/HEAVY_HOOKS.md`](docs/HEAVY_HOOKS.md).
+— are **opt-in**: add them with `--with checkov,tfsec,infracost,terrascan` (any
+subset). An unknown name exits with status 2. Details and per-tool caveats are in
+[`docs/HEAVY_HOOKS.md`](docs/HEAVY_HOOKS.md).
 
 ## How it works
 
 `lib/common.sh` is the single source of truth: the pinned revisions and the
 rendered YAML live there as pure, testable functions. `install.sh` is a thin
 POSIX-`sh` CLI over it, and the checked-in `hooks/.pre-commit-config.yaml` is
-generated from the same renderer — CI fails if the two ever drift.
+generated from the same renderer — CI fails if the two ever drift. The heavy
+hook snippets in `docs/HEAVY_HOOKS.md` come from the same functions via
+`scripts/gen-heavy-docs.sh`, and CI checks those too.
 
 ## Usage
 
@@ -61,7 +72,7 @@ $ ./install.sh --config-only --dir ./my-tf-repo
 ==> done (config only)
 ```
 
-Flags: `--dir`, `--config-only`, `--print`, `--dry-run`, `--force`,
+Flags: `--dir`, `--config-only`, `--print`, `--with`, `--dry-run`, `--force`,
 `--no-install`, `--version`, `--help`.
 
 ## Example
@@ -77,8 +88,9 @@ pre-commit run --all-files
 ## Develop
 
 ```sh
-shellcheck -s sh install.sh lib/common.sh
+shellcheck -s sh install.sh lib/common.sh scripts/gen-heavy-docs.sh
 bats test/
+sh scripts/gen-heavy-docs.sh   # after changing a heavy hook snippet
 ```
 
 Prerequisites for real hook runs: `terraform`, `tflint`, `terraform-docs`,

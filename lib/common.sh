@@ -40,16 +40,100 @@ pctl_detect_os() {
 	esac
 }
 
-# pctl_render_config -> prints the curated .pre-commit-config.yaml on stdout.
-# The light bundle: generic hygiene hooks + fmt / validate / tflint / docs /
-# trivy from antonbabenko/pre-commit-terraform. Heavier scanners are opt-in
-# and documented in docs/HEAVY_HOOKS.md, not wired in by default.
+# --- opt-in heavy hooks ------------------------------------------------------
+# Names accepted by install.sh --with, in the order they are rendered.
+PCTL_HEAVY_HOOKS="checkov tfsec infracost terrascan"
+
+# pctl_heavy_snippet <name> -> prints the hook entry for one heavy scanner,
+# indented to sit under the antonbabenko/pre-commit-terraform hooks list.
+# docs/HEAVY_HOOKS.md is regenerated from this (scripts/gen-heavy-docs.sh).
+pctl_heavy_snippet() {
+	case "$1" in
+	checkov)
+		cat <<'YAML'
+      - id: terraform_checkov
+        args:
+          - --args=--quiet
+          - --args=--compact
+YAML
+		;;
+	tfsec)
+		cat <<'YAML'
+      - id: terraform_tfsec
+        args:
+          - --args=--minimum-severity=HIGH
+YAML
+		;;
+	infracost)
+		cat <<'YAML'
+      - id: infracost_breakdown
+        args:
+          - --args=--path=.
+YAML
+		;;
+	terrascan)
+		cat <<'YAML'
+      - id: terrascan
+        args:
+          - --args=--non-recursive
+YAML
+		;;
+	*)
+		printf 'pctl_heavy_snippet: unknown hook: %s\n' "$1" >&2
+		return 1
+		;;
+	esac
+}
+
+# pctl_heavy_list <csv> -> normalises a --with value: prints the known names
+# it contains in canonical order, one per line, duplicates dropped. Returns 2
+# and prints the valid names on stderr if any entry is unknown.
+pctl_heavy_list() {
+	_req=" $(printf '%s' "$1" | tr ',' ' ') "
+	for _n in $_req; do
+		case " $PCTL_HEAVY_HOOKS " in
+		*" $_n "*) : ;;
+		*)
+			printf 'unknown heavy hook: %s (valid: %s)\n' "$_n" \
+				"$(printf '%s' "$PCTL_HEAVY_HOOKS" | tr ' ' ',')" >&2
+			return 2
+			;;
+		esac
+	done
+	for _n in $PCTL_HEAVY_HOOKS; do
+		case "$_req" in
+		*" $_n "*) printf '%s\n' "$_n" ;;
+		esac
+	done
+}
+
+# pctl_heavy_tool <name> -> the binary a heavy hook shells out to.
+pctl_heavy_tool() {
+	case "$1" in
+	checkov | tfsec | infracost | terrascan) printf '%s\n' "$1" ;;
+	*)
+		printf 'pctl_heavy_tool: unknown hook: %s\n' "$1" >&2
+		return 1
+		;;
+	esac
+}
+
+# pctl_render_config [csv] -> prints the curated .pre-commit-config.yaml on
+# stdout. The light bundle: generic hygiene hooks + fmt / validate / tflint /
+# docs / trivy from antonbabenko/pre-commit-terraform. Heavier scanners are
+# opt-in: pass their names (comma-separated, see PCTL_HEAVY_HOOKS) and they are
+# appended to the terraform hooks list. Returns 2 on an unknown name.
 pctl_render_config() {
 	tf_rev="$(pctl_pin terraform)"
 	hooks_rev="$(pctl_pin precommit-hooks)"
+	heavy="$(pctl_heavy_list "${1:-}")" || return 2
+	regen="install.sh --print"
+	if [ -n "$heavy" ]; then
+		regen="install.sh --with $(printf '%s\n' "$heavy" | paste -sd, -) --print"
+	fi
 	cat <<YAML
 # Managed by pre-commit-terraform-lite — https://github.com/moveeeax/pre-commit-terraform-lite
-# Curated, pinned Terraform hooks. Regenerate: install.sh --print > .pre-commit-config.yaml
+# Curated, pinned Terraform hooks. Regenerate: ${regen} > .pre-commit-config.yaml
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: ${hooks_rev}
@@ -78,10 +162,18 @@ repos:
         args:
           - --args=--severity=HIGH,CRITICAL
 YAML
+	for _h in $heavy; do
+		pctl_heavy_snippet "$_h"
+	done
 }
 
-# pctl_config_tools -> lists the external tools the config's hooks shell out to,
-# one per line. Used by install.sh to know what to install and by tests.
+# pctl_config_tools [csv] -> lists the external tools the config's hooks shell
+# out to, one per line, including any opted-in heavy hooks. Used by install.sh
+# to know what to check for and by tests. Returns 2 on an unknown name.
 pctl_config_tools() {
+	heavy="$(pctl_heavy_list "${1:-}")" || return 2
 	printf 'pre-commit\nterraform\ntflint\nterraform-docs\ntrivy\n'
+	for _h in $heavy; do
+		pctl_heavy_tool "$_h"
+	done
 }

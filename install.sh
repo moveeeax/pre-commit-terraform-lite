@@ -52,6 +52,8 @@ Options:
   --dir DIR        Target repository directory (default: .)
   --config-only    Write .pre-commit-config.yaml, skip installing tools/hooks
   --print          Print the rendered config to stdout and exit
+  --with LIST      Add opt-in heavy hooks, comma-separated:
+                   checkov,tfsec,infracost,terrascan (see docs/HEAVY_HOOKS.md)
   --dry-run        Show what would happen without changing anything
   --force          Overwrite an existing .pre-commit-config.yaml
   --no-install     Do not run 'pre-commit install' (just deps + config)
@@ -62,6 +64,7 @@ Examples:
   $SELF                    # config + tools + git hook in the current repo
   $SELF --config-only      # only drop the config file
   $SELF --print > .pre-commit-config.yaml
+  $SELF --with checkov,infracost --print > .pre-commit-config.yaml
 USAGE
 }
 
@@ -77,6 +80,8 @@ CONFIG_ONLY=0
 DRY_RUN=0
 FORCE=0
 DO_INSTALL=1
+PRINT=0
+WITH=""
 
 while [ $# -gt 0 ]; do
 	case "$1" in
@@ -89,8 +94,12 @@ while [ $# -gt 0 ]; do
 		shift
 		;;
 	--print)
-		pctl_render_config
-		exit 0
+		PRINT=1
+		shift
+		;;
+	--with)
+		WITH="${2?--with needs a value}"
+		shift 2
 		;;
 	--dry-run)
 		DRY_RUN=1
@@ -116,6 +125,17 @@ while [ $# -gt 0 ]; do
 	esac
 done
 
+# Reject unknown --with names before touching anything (exit 2, valid list on
+# stderr from pctl_heavy_list).
+if ! pctl_heavy_list "$WITH" >/dev/null; then
+	exit 2
+fi
+
+if [ "$PRINT" -eq 1 ]; then
+	pctl_render_config "$WITH"
+	exit 0
+fi
+
 run() {
 	if [ "$DRY_RUN" -eq 1 ]; then
 		printf '  [dry-run] %s\n' "$*"
@@ -136,7 +156,7 @@ write_config() {
 	if [ "$DRY_RUN" -eq 1 ]; then
 		printf '  [dry-run] render config -> %s\n' "$cfg"
 	else
-		pctl_render_config >"$cfg"
+		pctl_render_config "$WITH" >"$cfg"
 	fi
 }
 
@@ -164,7 +184,9 @@ install_precommit() {
 install_tools() {
 	os="$(pctl_detect_os)"
 	log "detected OS: $os"
-	for tool in terraform tflint terraform-docs trivy; do
+	for tool in $(pctl_config_tools "$WITH"); do
+		# pre-commit itself is handled by install_precommit.
+		[ "$tool" = "pre-commit" ] && continue
 		if pctl_have "$tool"; then
 			log "$tool present"
 			continue
