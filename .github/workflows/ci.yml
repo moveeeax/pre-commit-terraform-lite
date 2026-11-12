@@ -26,10 +26,13 @@ jobs:
           shellcheck --version
 
       - name: ShellCheck
-        run: shellcheck -s sh install.sh lib/common.sh
+        run: shellcheck -s sh install.sh lib/common.sh scripts/gen-heavy-docs.sh
 
       - name: Verify config has not drifted from the renderer
         run: diff <(sh install.sh --print) hooks/.pre-commit-config.yaml
+
+      - name: Verify heavy hook docs match the renderer
+        run: sh scripts/gen-heavy-docs.sh --check
 
       - name: Unit tests (bats)
         run: bats test/

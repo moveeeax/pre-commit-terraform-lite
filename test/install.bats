@@ -72,3 +72,42 @@ teardown() {
 	[ "$status" -ne 0 ]
 	[[ "$output" == *"not found"* ]]
 }
+
+@test "--help documents --with" {
+	run sh "$INSTALL" --help
+	[[ "$output" == *"--with"* ]]
+}
+
+@test "--with adds heavy hooks to --print regardless of flag order" {
+	run sh "$INSTALL" --with checkov --print
+	[ "$status" -eq 0 ]
+	[[ "$output" == *"terraform_checkov"* ]]
+	run sh "$INSTALL" --print --with checkov
+	[ "$status" -eq 0 ]
+	[[ "$output" == *"terraform_checkov"* ]]
+}
+
+@test "--with renders heavy hooks into the written config" {
+	run sh "$INSTALL" --config-only --dir "$WORK" --with tfsec,terrascan
+	[ "$status" -eq 0 ]
+	grep -q "terraform_tfsec" "$WORK/.pre-commit-config.yaml"
+	grep -q "id: terrascan" "$WORK/.pre-commit-config.yaml"
+}
+
+@test "--with an unknown hook exits 2 with the valid list and writes nothing" {
+	run sh "$INSTALL" --config-only --dir "$WORK" --with checkov,bogus
+	[ "$status" -eq 2 ]
+	[[ "$output" == *"bogus"* ]]
+	[[ "$output" == *"checkov,tfsec,infracost,terrascan"* ]]
+	[ ! -f "$WORK/.pre-commit-config.yaml" ]
+}
+
+@test "--with checks for the heavy hook tools" {
+	# --dry-run and --no-install keep this off the network and the git hooks.
+	# The warning is only asserted where infracost is not installed.
+	run sh "$INSTALL" --dir "$WORK" --with infracost --no-install --dry-run
+	[ "$status" -eq 0 ]
+	if ! command -v infracost >/dev/null 2>&1; then
+		[[ "$output" == *"infracost not found"* ]]
+	fi
+}
